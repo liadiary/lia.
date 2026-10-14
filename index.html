@@ -1,14 +1,51 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090909"><title>Flourish — Review Hub</title><link rel="stylesheet" href="styles.css"></head>
-<body><div class="app-shell">
-<aside class="sidebar"><a class="brand" href="#"><span>F</span><b>Flourish</b></a>
-<nav><small>工作区</small><a class="active" href="#reviews">▣ 审阅项目 <i id="navCount">0</i></a><a href="#overview">⌁ 数据概览</a></nav>
-<nav class="status-nav"><small>项目状态</small><button data-filter="pending"><i class="dot"></i>等待反馈</button><button data-filter="progress"><i class="dot mid"></i>进行中</button><button data-filter="done"><i class="dot ring"></i>已完成</button></nav>
-<div class="profile"><span>FH</span><div><b>Flourish 团队</b><small>本地工作区</small></div><i>•••</i></div></aside>
-<section class="main-panel"><header class="topbar"><button id="mobileMenu" class="icon mobile" aria-label="打开菜单">☰</button><div class="crumb"><span>Flourish</span> / <b>审阅中心</b></div><div class="actions"><button id="themeToggle" class="icon" aria-label="切换主题">◐</button><button id="newReviewButton" class="primary">＋ 新建审阅</button></div></header>
-<main class="content"><section class="intro" id="overview"><div><small>审阅工作区</small><h1>好的决定，<br>由我们<em>共同完成。</em></h1><p>集中管理反馈与决策，让每一次审阅都更清晰、更高效。</p></div><div class="today"><div><span id="todayWeekday"></span><b id="todayDate"></b></div><p><strong id="todayPending">0</strong> 个活跃审阅</p></div></section>
-<section class="metrics"><article><span>全部审阅</span><b id="totalCount">0</b><small>当前工作区</small></article><article><span>等待反馈</span><b id="pendingCount">0</b><small>需要关注</small></article><article><span>进行中</span><b id="progressCount">0</b><small>持续推进</small></article><article><span>已完成</span><b id="doneCount">0</b><small>准备交付</small></article></section>
-<section class="reviews" id="reviews"><div class="section-head"><div><h2>审阅项目</h2><span>管理所有审阅事项</span></div><label class="search">⌕<input id="searchInput" type="search" placeholder="搜索审阅项目…"><kbd>⌘ K</kbd></label></div>
-<div class="toolbar"><div id="filters"><button class="filter active" data-filter="all">全部</button><button class="filter" data-filter="pending">等待反馈</button><button class="filter" data-filter="progress">进行中</button><button class="filter" data-filter="done">已完成</button></div><span class="saved"><i></i> 已保存至本地</span></div>
-<div class="table-head"><span>审阅项目</span><span>状态</span><span>负责人</span><span>截止日期</span><span></span></div><div id="reviewGrid" class="review-grid"></div>
-<div id="emptyState" class="empty" hidden><div>◇</div><h3>没有找到审阅项目</h3><p>调整筛选条件，或创建一条新的审阅。</p><button id="emptyCreate" class="primary">＋ 新建审阅</button></div></section></main></section></div>
-<dialog id="reviewDialog"><form id="reviewForm" method="dialog"><header><div><small>审阅详情</small><h2 id="dialogTitle">新建审阅</h2></div><button id="closeDialog" class="close" type="button" aria-label="关闭">×</button></header><input id="reviewId" type="hidden"><label>标题<input id="titleInput" required maxlength="60" placeholder="需要审阅什么？"></label><div class="form-row"><label>负责人<input id="ownerInput" required maxlength="30" placeholder="姓名或团队"></label><label>截止日期<input id="dateInput" required type="date"></label></div><div class="form-row"><label>状态<select id="statusInput"><option value="pending">等待反馈</option><option value="progress">进行中</option><option value="done">已完成</option></select></label><label>分类<input id="tagInput" maxlength="20" placeholder="设计、产品、内容…"></label></div><label>说明<textarea id="descriptionInput" rows="4" maxlength="240" placeholder="补充背景、目标或反馈重点…"></textarea></label><footer><button id="deleteButton" class="danger" type="button" hidden>删除</button><span></span><button id="cancelButton" class="secondary" type="button">取消</button><button class="primary" type="submit">保存审阅</button></footer></form></dialog><div id="toast" class="toast"></div><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b0b0c"><title>Flourish Review Hub</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <a class="brand" href="#"><span>F</span><b>Flourish</b></a>
+    <nav><small>工作区</small><button class="nav active" data-view="projects">▦<span>审核项目</span><i id="projectCount">0</i></button><button class="nav" data-view="rules">◇<span>Brief 规则库</span></button><button class="nav" data-view="templates">▤<span>审核模板</span></button></nav>
+    <nav><small>快捷筛选</small><button class="quick-filter" data-status="待审核"><i class="dot white"></i>待审核</button><button class="quick-filter" data-status="待人工确认"><i class="dot gray"></i>待人工确认</button><button class="quick-filter" data-status="待客户反馈"><i class="dot ring"></i>待客户反馈</button></nav>
+    <div class="profile"><span>FC</span><div><b>FlourishCulture</b><small>单人工作区 · 已本地保存</small></div></div>
+  </aside>
+
+  <section class="main">
+    <header class="topbar"><button id="menuBtn" class="icon mobile">☰</button><div class="crumb"><span>Flourish</span><b>/</b><strong id="crumbTitle">审核项目</strong></div><div class="top-actions"><button class="ghost" id="globalSearch">⌕ 搜索</button><button class="primary" id="newProject">＋ 新建项目</button></div></header>
+
+    <main id="projectsView" class="page">
+      <section class="hero"><div><span class="eyebrow">REVIEW WORKSPACE</span><h1>内容审核，<br><em>清晰推进。</em></h1><p>从脚本初审到视频二审，完整记录每一次反馈与修改。</p></div><div class="date-box"><span id="todayLabel"></span><b id="todayNum"></b><small><i></i><strong id="activeCount">0</strong> 个进行中项目</small></div></section>
+      <section class="metrics"><article><span>全部项目</span><b id="mAll">0</b><small>品牌合作项目</small></article><article><span>待审核</span><b id="mTodo">0</b><small>需要开始处理</small></article><article><span>待人工确认</span><b id="mConfirm">0</b><small>AI草稿待确认</small></article><article><span>待客户反馈</span><b id="mClient">0</b><small>已发送客户</small></article></section>
+      <section class="project-section"><div class="section-title"><div><h2>审核项目</h2><p>每次品牌合作建立一个独立项目</p></div><label class="search">⌕<input id="searchInput" placeholder="搜索达人、品牌或项目…"><kbd>⌘ K</kbd></label></div><div class="filters"><button class="filter active" data-status="全部">全部</button><button class="filter" data-status="待审核">待审核</button><button class="filter" data-status="待人工确认">待人工确认</button><button class="filter" data-status="待客户反馈">待客户反馈</button><button class="filter" data-status="已完成">已完成</button></div><div class="project-table"><div class="table-head"><span>项目 / 达人</span><span>当前阶段</span><span>状态</span><span>负责人</span><span>截止日期</span><span></span></div><div id="projectRows"></div></div><div id="projectEmpty" class="empty" hidden><b>◇</b><h3>还没有审核项目</h3><p>创建第一个达人合作项目，开始完整审核流程。</p><button class="primary" id="emptyNew">＋ 新建项目</button></div></section>
+    </main>
+
+    <main id="reviewView" class="review-page" hidden>
+      <header class="project-header"><button id="backProjects" class="back">← 返回项目</button><div class="project-heading"><div><span class="eyebrow" id="detailBrand"></span><h1 id="detailTitle"></h1><p id="detailMeta"></p></div><div class="heading-actions"><span class="state-pill" id="detailStatus"></span><button class="secondary" id="editProject">编辑项目</button></div></div></header>
+      <div class="stepper" id="stageStepper"></div>
+      <div class="review-layout">
+        <aside class="version-panel"><div class="panel-label">审核记录 · 最新在前</div><div id="versionList"></div></aside>
+        <section class="material-panel"><header><div><span class="eyebrow" id="materialStage"></span><h2>审核材料</h2></div><span class="save-state">● 自动保存</span></header>
+          <div class="notice" id="stageNotice"></div>
+          <div class="field"><label>适用 Brief <b>*</b></label><select id="briefSelect"><option value="">请选择，无法确定时先询问</option><option>VFX / Animation Creators</option><option>Design / 3D Artist</option><option>Game Development</option><option>Smart Mesh P2.0 / Game-Ready Pipeline</option><option>3D Printing Creators</option><option>Parent & Home DIY</option><option>Space / Product Design / Web / Programming</option></select></div>
+          <div class="field"><label>项目补充要求 <small>与 Brief 冲突时，以此为准</small></label><textarea id="extraRules" rows="3" placeholder="填写客户或本项目的特殊要求…"></textarea></div>
+          <div class="field"><label>本阶段模型链接 <small>不同阶段可使用不同模型</small></label><div id="modelLinks"></div><button class="text-btn" id="addModel">＋ 添加模型链接</button></div>
+          <div id="scriptMaterial"><div class="input-tabs"><button class="active" data-input="text">粘贴文字</button><button data-input="file">上传文件</button><button data-input="feishu">飞书在线文档</button></div><div id="textInput" class="input-box"><textarea id="scriptText" rows="15" placeholder="粘贴达人脚本内容…"></textarea></div><div id="fileInput" class="input-box" hidden><label class="dropzone">＋<b>上传脚本文件</b><span>支持 TXT、DOCX、PDF</span><input id="scriptFile" type="file" accept=".txt,.doc,.docx,.pdf"></label><div id="fileName"></div></div><div id="feishuInput" class="input-box" hidden><label class="url-input">🔗<input id="feishuUrl" type="url" placeholder="粘贴飞书在线文档链接"></label><div class="integration-note"><b>飞书读取待授权</b><p>当前先保存链接和权限状态；接入飞书应用授权后，将先预览读取内容，再由人工确认导入。</p></div></div></div>
+          <div id="videoMaterial" hidden><label class="dropzone video-drop">▶<b>上传审核视频</b><span>支持 MP4、MOV、WebM</span><input id="videoFile" type="file" accept="video/*"></label><video id="videoPreview" controls hidden></video><div class="field compact"><label>或填写飞书文档 / 视频链接</label><label class="url-input">🔗<input id="videoUrl" type="url" placeholder="https://..."></label></div></div>
+          <button class="run-review" id="runReview"><span>✦</span><div><b>生成 AI 审核草稿</b><small>按统一规则、指定 Brief 和项目补充要求审核</small></div><i>→</i></button>
+        </section>
+        <section class="result-panel"><header><div><span class="eyebrow">FLOURISH REVIEW</span><h2>审核结果</h2></div><span id="draftBadge" class="draft-badge">尚未生成</span></header><div id="resultEmpty" class="result-empty"><b>✦</b><h3>等待开始审核</h3><p>补充左侧材料后生成审核草稿。AI不会修改原文，所有结果需要人工确认。</p></div><div id="resultContent" hidden><div class="result-summary"><div><span>审核结论</span><b id="reviewConclusion"></b></div><div><span>必须修改</span><b id="mustCount"></b></div><div><span>建议优化</span><b id="suggestCount"></b></div></div><div class="check-grid" id="checkGrid"></div><div class="result-title"><h3>FlourishCulture审核意见</h3><button id="addOpinion" class="text-btn">＋ 添加意见</button></div><div id="opinionList"></div><label class="field"><span>创意亮点 <small>没有则留空</small></span><textarea id="creativePoint" rows="2" placeholder="例如：结果前置，前三秒Hook清晰…"></textarea></label><div class="confirm-box"><label><input id="humanConfirm" type="checkbox"> 我已人工检查并确认以上审核结果</label><small>修改已确认内容后，需要重新确认。</small></div><div class="result-actions"><button id="copyFeishu" class="primary" disabled>复制飞书格式</button><button id="sendClient" class="secondary" disabled>标记为待客户反馈</button></div></div></section>
+      </div>
+    </main>
+
+    <main id="rulesView" class="simple-page" hidden><span class="eyebrow">RULE LIBRARY</span><h1>Brief 规则库</h1><p>审核规则按“统一要求 ＞ 项目补充要求 ＞ 指定 Brief ＞ 通用规则 ＞ 创意建议”执行。</p><div id="ruleCards" class="rule-grid"></div></main>
+    <main id="templatesView" class="simple-page" hidden><span class="eyebrow">OUTPUT TEMPLATE</span><h1>审核模板</h1><p>所有版本倒叙叠加，最新审核置顶，历史意见完整保留。</p><pre id="templatePreview"></pre></main>
+  </section>
+</div>
+
+<dialog id="projectDialog"><form id="projectForm"><header><div><span class="eyebrow">PROJECT SETUP</span><h2 id="projectDialogTitle">新建审核项目</h2></div><button type="button" class="icon" id="closeProject">×</button></header><input id="projectId" type="hidden"><div class="form-grid"><label>项目名称 *<input id="pName" required placeholder="例如：Tripo × Alex 10月合作"></label><label>品牌名称 *<input id="pBrand" required value="Tripo"></label><label>达人名称 *<input id="pCreator" required placeholder="达人姓名"></label><label>达人国家 *<input id="pCountry" required placeholder="例如：美国"></label><label>达人类型 *<select id="pType" required><option value="">请选择</option><option>VFX / Animation</option><option>Design / 3D Artist</option><option>Game Development</option><option>3D Printing</option><option>Parent & Home DIY</option><option>Space / Product / Web / Programming</option></select></label><label>内容语言<input id="pLanguage" placeholder="例如：英语"></label><label>负责人<input id="pOwner" value="FlourishCulture"></label><label>截止日期<input id="pDue" type="date"></label></div><footer><button type="button" class="secondary" id="cancelProject">取消</button><button class="primary" type="submit">保存并进入审核</button></footer></form></dialog>
+<div id="toast" class="toast"></div><script src="app.js"></script>
+</body></html>

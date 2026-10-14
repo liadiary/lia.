@@ -1,161 +1,63 @@
-const STORAGE_KEY = "lia-review-hub-v1";
-const THEME_KEY = "lia-theme";
-
-const addDays = (days) => {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-};
-
-const starterReviews = [
-  { id: crypto.randomUUID(), title: "秋季品牌视觉提案", owner: "Mia", date: addDays(2), status: "pending", tag: "品牌设计", description: "确认主视觉方向、字体层级与延展场景的一致性。" },
-  { id: crypto.randomUUID(), title: "移动端首页体验优化", owner: "产品团队", date: addDays(5), status: "progress", tag: "产品体验", description: "聚焦首屏信息密度、快捷入口与核心路径的可发现性。" },
-  { id: crypto.randomUUID(), title: "九月内容专题", owner: "Nora", date: addDays(-1), status: "done", tag: "内容", description: "专题结构、标题语气和发布素材均已完成最终确认。" },
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const KEY='flourish-review-hub-v3';
+const stages=[
+  {id:'script1',name:'脚本初审',version:'脚本审核 V1',type:'script'},
+  {id:'script2',name:'脚本二审',version:'脚本审核 V2',type:'script',feishu:true},
+  {id:'video1',name:'视频一审',version:'视频审核 V1',type:'video'},
+  {id:'video2',name:'视频二审',version:'视频审核 V2',type:'video',feishu:true}
 ];
+const rules=[
+  ['统一审核要求','项目补充要求优先于指定 Brief；不自行补充或猜测要求。','最高优先级'],
+  ['模型链接','脚本与视频阶段分别维护模型链接，按模型1、模型2倒序模板输出。','必须'],
+  ['完整 Workflow','必须明确Tripo功能、操作步骤、导出和实际项目应用。','必须'],
+  ['过期内容','拦截Tripo 3.0 Ultra、Local Edit、Smart Mesh挑战赛及旧奖励信息。','禁止'],
+  ['人工确认','AI结果仅为草稿，人工确认后才可复制飞书格式。','必须'],
+  ['创意亮点','检查前三秒Hook、结果前置、前后对比和最终成品；没有则不强行写。','建议']
+];
+const demo={id:crypto.randomUUID(),name:'Tripo × Alex 游戏模型合作',brand:'Tripo',creator:'Alex Rivera',country:'西班牙',type:'Game Development',language:'西语',owner:'FlourishCulture',due:addDays(5),status:'待审核',currentStage:'script1',created:Date.now(),stageData:{script1:{brief:'Game Development',extra:'重点展示模型在Unity中的实际使用。',models:['https://studio.tripo3d.ai/model/example'],text:'前三秒展示最终游戏画面。上传角色参考图，使用 Smart Mesh 生成模型，导出后放入 Unity 场景。最后引导用户点击 Bio 链接注册。',opinions:[],confirmed:false}}};
+let state=load(),currentProject=null,currentStage='script1',filter='全部',query='';
 
-let reviews = loadReviews();
-let currentFilter = "all";
-let searchTerm = "";
+function addDays(n){const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x?.projects)return x}catch{}return{projects:[demo]}}
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function esc(v=''){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
+function stageInfo(id){return stages.find(s=>s.id===id)}
+function getProject(){return state.projects.find(p=>p.id===currentProject)}
+function ensureData(p,id){p.stageData??={};p.stageData[id]??={brief:'',extra:'',models:[''],text:'',feishuUrl:'',videoUrl:'',fileName:'',opinions:[],confirmed:false};return p.stageData[id]}
 
-const $ = (selector) => document.querySelector(selector);
-const grid = $("#reviewGrid");
-const dialog = $("#reviewDialog");
-const form = $("#reviewForm");
-
-function loadReviews() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return Array.isArray(saved) ? saved : starterReviews;
-  } catch { return starterReviews; }
+function renderHome(){
+  const ps=state.projects,visible=ps.filter(p=>(filter==='全部'||p.status===filter)&&`${p.name} ${p.creator} ${p.brand}`.toLowerCase().includes(query.toLowerCase()));
+  $('#projectCount').textContent=ps.length;$('#mAll').textContent=ps.length;$('#mTodo').textContent=ps.filter(p=>p.status==='待审核').length;$('#mConfirm').textContent=ps.filter(p=>p.status==='待人工确认').length;$('#mClient').textContent=ps.filter(p=>p.status==='待客户反馈').length;$('#activeCount').textContent=ps.filter(p=>p.status!=='已完成').length;
+  $('#projectRows').innerHTML=visible.map(p=>`<div class="project-row" data-id="${p.id}"><div class="project-name"><b>${esc(p.name)}</b><small>${esc(p.brand)} · ${esc(p.creator)} · ${esc(p.country)}</small></div><span class="stage-tag">${stageInfo(p.currentStage).name}</span><span class="status-tag ${p.status==='待人工确认'?'confirm':p.status==='待客户反馈'?'client':''}">${p.status}</span><span class="cell">${esc(p.owner||'—')}</span><span class="cell">${p.due||'—'}</span><span class="arrow">›</span></div>`).join('');
+  $('#projectEmpty').hidden=visible.length>0;$('.project-table').hidden=visible.length===0;
 }
-
-function saveReviews() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reviews));
+function showView(name){['projects','review','rules','templates'].forEach(v=>$(`#${v}View`).hidden=v!==name);$('#crumbTitle').textContent={projects:'审核项目',review:'项目审核',rules:'Brief 规则库',templates:'审核模板'}[name];$$('.nav').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='rules')renderRules();if(name==='templates')renderTemplate()}
+function openProject(id,stageId){currentProject=id;const p=getProject();currentStage=stageId||p.currentStage;ensureData(p,currentStage);showView('review');renderReview();window.scrollTo(0,0)}
+function renderReview(){const p=getProject(),d=ensureData(p,currentStage),s=stageInfo(currentStage);$('#detailBrand').textContent=p.brand;$('#detailTitle').textContent=p.name;$('#detailMeta').textContent=`${p.creator} · ${p.country} · ${p.type} · ${p.language||'未填写语言'}`;$('#detailStatus').textContent=p.status;$('#materialStage').textContent=s.name;$('#stageNotice').textContent=s.feishu?'二审建议优先导入飞书在线文档，并与上一版本逐条对比。无法访问时需提示补充权限。':'本阶段的模型链接与材料独立保存，不会覆盖其他审核阶段。';
+  $('#stageStepper').innerHTML=stages.map((x,i)=>{const ci=stages.findIndex(y=>y.id===currentStage),cls=i<ci?'done':i===ci?'active':'';return `<button class="step ${cls}" data-open-stage="${x.id}"><i>${i<ci?'✓':i+1}</i><span>${x.name}</span></button>`}).join('');
+  const existing=stages.filter(x=>p.stageData?.[x.id]).reverse();$('#versionList').innerHTML=existing.map((x,i)=>`<button class="version ${x.id===currentStage?'active':''}" data-stage="${x.id}"><b>${x.version}${i===0?' · 最新':''}</b><small>${p.stageData[x.id].confirmed?'已人工确认':p.stageData[x.id].opinions?.length?'AI草稿 · 待确认':'待审核'}</small>${i===0?'<span class="latest">● 最新版本</span>':''}</button>`).join('');
+  $('#briefSelect').value=d.brief||'';$('#extraRules').value=d.extra||'';renderModels(d);$('#scriptMaterial').hidden=s.type!=='script';$('#videoMaterial').hidden=s.type!=='video';$('#scriptText').value=d.text||'';$('#feishuUrl').value=d.feishuUrl||'';$('#videoUrl').value=d.videoUrl||'';$('#fileName').textContent=d.fileName?`已选择：${d.fileName}`:'';
+  if(s.type==='script'){$$('.input-tabs button').forEach(x=>x.classList.toggle('active',x.dataset.input===(s.feishu?'feishu':'text')));['text','file','feishu'].forEach(x=>$(`#${x}Input`).hidden=x!==(s.feishu?'feishu':'text'))}
+  renderResult(d);
 }
+function renderModels(d){if(!d.models?.length)d.models=[''];$('#modelLinks').innerHTML=d.models.map((v,i)=>`<div class="model-row"><span>模型${i+1}</span><input value="${esc(v)}" data-model="${i}" placeholder="粘贴 Tripo 模型链接"><button data-remove-model="${i}" title="删除">×</button></div>`).join('')}
+function renderResult(d){const has=d.opinions?.length;$('#resultEmpty').hidden=has;$('#resultContent').hidden=!has;$('#draftBadge').textContent=!has?'尚未生成':d.confirmed?'已人工确认':'AI草稿 · 待确认';if(!has)return;$('#reviewConclusion').textContent=d.conclusion||'需要修改';$('#mustCount').textContent=d.opinions.filter(o=>o.level==='必须修改').length;$('#suggestCount').textContent=d.opinions.filter(o=>o.level==='建议优化').length;$('#checkGrid').innerHTML=Object.entries(d.checks||{}).map(([k,v])=>`<div class="check-item"><span>${k}</span><b class="${v==='通过'?'ok':'warn'}">${v}</b></div>`).join('');$('#opinionList').innerHTML=d.opinions.map((o,i)=>`<div class="opinion"><span>${i+1}</span><textarea data-opinion="${i}" rows="2">${esc(o.text)}</textarea><button data-remove-opinion="${i}">×</button><select data-level="${i}"><option ${o.level==='必须修改'?'selected':''}>必须修改</option><option ${o.level==='建议优化'?'selected':''}>建议优化</option><option ${o.level==='信息提醒'?'selected':''}>信息提醒</option></select></div>`).join('');$('#creativePoint').value=d.creative||'';$('#humanConfirm').checked=!!d.confirmed;$('#copyFeishu').disabled=!d.confirmed;$('#sendClient').disabled=!d.confirmed}
 
-function formatDate(value) {
-  const date = new Date(`${value}T00:00:00`);
-  return new Intl.DateTimeFormat("zh-CN", { month: "short", day: "numeric" }).format(date);
-}
+function runAudit(){const p=getProject(),d=ensureData(p,currentStage),s=stageInfo(currentStage);syncForm();const source=(d.text||'').toLowerCase(),models=d.models.filter(Boolean),ops=[];if(!d.brief)ops.push({level:'必须修改',text:'未选择适用Brief，无法确认审核标准。'});if(!models.length)ops.push({level:'必须修改',text:'缺模型链接。'});if(s.type==='script'&&!d.text&&!d.feishuUrl&&!d.fileName)ops.push({level:'必须修改',text:'缺脚本内容。'});if(s.type==='video'&&!d.videoUrl&&!d.fileName)ops.push({level:'必须修改',text:'缺审核视频或可访问的视频链接。'});if(s.type==='script'&&d.text){if(!/(导出|export)/i.test(source)||!/(unity|unreal|blender|maya|打印|切片|网页|游戏|设计)/i.test(source))ops.push({level:'必须修改',text:'目前workflow不完整，补充模型导出及后续实际使用步骤。'});if(!/(bio|链接|注册|cta)/i.test(source))ops.push({level:'必须修改',text:'缺CTA。'});if(!/(hook|前三秒|前3秒|最终|成品|效果)/i.test(source))ops.push({level:'建议优化',text:'前三秒增加结果画面或明确Hook。'});if(/smart mesh挑战赛|triposmartmesh|3,000|3000|local edit|tripo 3\.0 ultra/i.test(source))ops.push({level:'必须修改',text:'包含过期或禁止内容，删除挑战赛、旧奖励或未上线功能相关表达。'});if(d.brief==='Game Development'&&!/(unity|unreal|roblox|游戏|playable)/i.test(source))ops.push({level:'必须修改',text:'缺模型在游戏开发中的实际使用。'});}
+  if(s.id.endsWith('2')){const prev=ensureData(p,s.id==='script2'?'script1':'video1');if(prev.opinions?.length)ops.unshift({level:'信息提醒',text:`需逐条对照上一轮${prev.opinions.length}条意见，标记已修改、部分修改或未修改。`})}
+  if(!ops.length)ops.push({level:'信息提醒',text:'当前材料未发现明显硬性问题，请人工对照原始Brief完成最终确认。'});d.opinions=ops;d.checks={'材料完整性':models.length?'通过':'待补充','Brief匹配':d.brief?'通过':'待确认','功能点':source?'已提取':'待确认','Workflow':ops.some(o=>o.text.includes('workflow'))?'不完整':'通过','CTA':ops.some(o=>o.text==='缺CTA。')?'缺失':'通过','过期内容':ops.some(o=>o.text.includes('过期'))?'发现问题':'通过'};d.conclusion=ops.some(o=>o.level==='必须修改')?'需要修改':'人工确认后通过';d.confirmed=false;p.status='待人工确认';p.currentStage=currentStage;save();renderReview();renderHome();toast('AI审核草稿已生成，请人工确认')}
+function syncForm(){if(!currentProject)return;const p=getProject(),d=ensureData(p,currentStage);d.brief=$('#briefSelect').value;d.extra=$('#extraRules').value;d.text=$('#scriptText').value;d.feishuUrl=$('#feishuUrl').value;d.videoUrl=$('#videoUrl').value;d.creative=$('#creativePoint')?.value||d.creative||'';$$('[data-model]').forEach(x=>d.models[+x.dataset.model]=x.value.trim());$$('[data-opinion]').forEach(x=>{if(d.opinions[+x.dataset.opinion])d.opinions[+x.dataset.opinion].text=x.value});$$('[data-level]').forEach(x=>{if(d.opinions[+x.dataset.level])d.opinions[+x.dataset.level].level=x.value});save()}
+function copyFeishu(){syncForm();const p=getProject(),d=ensureData(p,currentStage),s=stageInfo(currentStage),models=d.models.filter(Boolean).map((x,i)=>`模型${i+1}：${x}`).join('\n')||'缺模型链接';const prior=s.id.endsWith('2')?'\n上一轮意见：\n（请参照下方历史版本）\n\n达人修改情况：\n（已修改／部分修改／未修改）\n':'';const out=`【${s.version}｜最新】\n\n模型链接：\n${models}\n\n审核阶段：${s.name}\n达人名称：${p.creator}\n达人国家：${p.country}\n达人类型：${p.type}\n适用Brief：${d.brief||'未选择'}\n脚本／视频主题：${p.name}\n使用功能点：请人工确认\nWorkflow：${d.checks?.Workflow||'待确认'}${prior}${d.creative?`\n创意亮点：${d.creative}\n`:''}\nFlourishCulture审核意见：\n${d.opinions.map((o,i)=>`${i+1}. ${o.text}`).join('\n')}\n\n原始内容：\n${d.text||d.feishuUrl||d.videoUrl||d.fileName||'见上传材料'}`;navigator.clipboard.writeText(out).then(()=>toast('已复制飞书格式')).catch(()=>toast('复制失败，请允许剪贴板权限'))}
+function renderRules(){$('#ruleCards').innerHTML=rules.map(r=>`<article class="rule-card"><h3>${r[0]}</h3><p>${r[1]}</p><span>${r[2]}</span></article>`).join('')}
+function renderTemplate(){$('#templatePreview').textContent=`【视频审核 V2｜最新】\n模型链接：\n上一轮意见：\n达人修改情况：\n视频链接：\nFlourishCulture审核意见：\n\n【视频审核 V1】\n视频链接：\nFlourishCulture审核意见：\n\n【脚本审核 V2】\n模型链接：\n上一轮意见：\n达人修改情况：\n脚本原稿 V2：\nFlourishCulture审核意见：\n\n【脚本审核 V1】\n模型链接：\n脚本主题：\n使用功能点：\nWorkflow：\n创意亮点：\nFlourishCulture审核意见：\n脚本原文：`}
+function openDialog(p){$('#projectForm').reset();$('#projectId').value=p?.id||'';$('#projectDialogTitle').textContent=p?'编辑审核项目':'新建审核项目';$('#pBrand').value=p?.brand||'Tripo';['Name','Creator','Country','Type','Language','Owner','Due'].forEach(k=>{const map={Name:'name',Creator:'creator',Country:'country',Type:'type',Language:'language',Owner:'owner',Due:'due'};$(`#p${k}`).value=p?.[map[k]]||($('#pOwner').value||'')});$('#projectDialog').showModal()}
 
-function escapeHtml(value = "") {
-  return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
-}
-
-function statusLabel(status) {
-  return ({ pending: "等待反馈", progress: "进行中", done: "已完成" })[status];
-}
-
-function render() {
-  const visible = reviews.filter((item) => {
-    const matchesFilter = currentFilter === "all" || item.status === currentFilter;
-    const haystack = `${item.title} ${item.owner} ${item.tag}`.toLowerCase();
-    return matchesFilter && haystack.includes(searchTerm.toLowerCase());
-  });
-
-  grid.innerHTML = visible.map((item) => `
-    <article class="review-card" data-id="${item.id}" tabindex="0" role="button" aria-label="编辑 ${escapeHtml(item.title)}">
-      <div class="card-title"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.tag || "Uncategorized")} · ${escapeHtml(item.description || "No description")}</span></div>
-      <span class="status ${item.status}">${statusLabel(item.status)}</span>
-      <span class="card-owner"><i class="owner-avatar">${escapeHtml(item.owner.slice(0, 2).toUpperCase())}</i>${escapeHtml(item.owner)}</span>
-      <span class="card-date">${formatDate(item.date)}</span>
-      <span class="card-arrow">›</span>
-    </article>`).join("");
-
-  $("#emptyState").hidden = visible.length > 0;
-  $("#totalCount").textContent = reviews.length;
-  $("#pendingCount").textContent = reviews.filter((item) => item.status === "pending").length;
-  $("#progressCount").textContent = reviews.filter((item) => item.status === "progress").length;
-  $("#doneCount").textContent = reviews.filter((item) => item.status === "done").length;
-  $("#todayPending").textContent = reviews.filter((item) => item.status !== "done").length;
-  $("#navCount").textContent = reviews.length;
-}
-
-function openDialog(item) {
-  form.reset();
-  $("#reviewId").value = item?.id || "";
-  $("#dialogTitle").textContent = item ? "编辑审阅" : "新建审阅";
-  $("#titleInput").value = item?.title || "";
-  $("#ownerInput").value = item?.owner || "";
-  $("#dateInput").value = item?.date || addDays(3);
-  $("#statusInput").value = item?.status || "pending";
-  $("#tagInput").value = item?.tag || "";
-  $("#descriptionInput").value = item?.description || "";
-  $("#deleteButton").hidden = !item;
-  dialog.showModal();
-  setTimeout(() => $("#titleInput").focus(), 50);
-}
-
-function showToast(message) {
-  const toast = $("#toast");
-  toast.textContent = message;
-  toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 1800);
-}
-
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const id = $("#reviewId").value;
-  const item = {
-    id: id || crypto.randomUUID(),
-    title: $("#titleInput").value.trim(),
-    owner: $("#ownerInput").value.trim(),
-    date: $("#dateInput").value,
-    status: $("#statusInput").value,
-    tag: $("#tagInput").value.trim(),
-    description: $("#descriptionInput").value.trim(),
-  };
-  if (id) reviews = reviews.map((review) => review.id === id ? item : review);
-  else reviews.unshift(item);
-  saveReviews(); render(); dialog.close(); showToast(id ? "审阅已更新" : "审阅已创建");
-});
-
-grid.addEventListener("click", (event) => {
-  const card = event.target.closest(".review-card");
-  if (card) openDialog(reviews.find((item) => item.id === card.dataset.id));
-});
-grid.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" || event.key === " ") event.target.click();
-});
-$("#filters").addEventListener("click", (event) => {
-  const button = event.target.closest(".filter");
-  if (!button) return;
-  document.querySelectorAll(".filter").forEach((item) => item.classList.remove("active"));
-  button.classList.add("active"); currentFilter = button.dataset.filter; render();
-});
-$("#searchInput").addEventListener("input", (event) => { searchTerm = event.target.value.trim(); render(); });
-$("#newReviewButton").addEventListener("click", () => openDialog());
-$("#emptyCreate").addEventListener("click", () => openDialog());
-$("#closeDialog").addEventListener("click", () => dialog.close());
-$("#cancelButton").addEventListener("click", () => dialog.close());
-$("#deleteButton").addEventListener("click", () => {
-  const id = $("#reviewId").value;
-  reviews = reviews.filter((item) => item.id !== id);
-  saveReviews(); render(); dialog.close(); showToast("审阅已删除");
-});
-
-const today = new Date();
-$("#todayWeekday").textContent = new Intl.DateTimeFormat("zh-CN", { weekday: "long" }).format(today);
-$("#todayDate").textContent = today.getDate();
-const savedTheme = localStorage.getItem(THEME_KEY);
-if (savedTheme === "dark") document.documentElement.classList.add("dark");
-$("#themeToggle").addEventListener("click", () => {
-  document.documentElement.classList.toggle("dark");
-  localStorage.setItem(THEME_KEY, document.documentElement.classList.contains("dark") ? "dark" : "light");
-});
-
-$("#mobileMenu").addEventListener("click", () => document.querySelector(".sidebar").classList.toggle("open"));
-document.querySelectorAll(".status-nav button").forEach((button) => button.addEventListener("click", () => {
-  currentFilter = button.dataset.filter;
-  document.querySelectorAll(".filter").forEach((item) => item.classList.toggle("active", item.dataset.filter === currentFilter));
-  document.querySelector(".sidebar").classList.remove("open");
-  render();
-}));
-document.addEventListener("keydown", (event) => {
-  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-    event.preventDefault();
-    $("#searchInput").focus();
-  }
-});
-
-render();
+$('#projectForm').addEventListener('submit',e=>{e.preventDefault();const id=$('#projectId').value,p={id:id||crypto.randomUUID(),name:$('#pName').value,brand:$('#pBrand').value,creator:$('#pCreator').value,country:$('#pCountry').value,type:$('#pType').value,language:$('#pLanguage').value,owner:$('#pOwner').value,due:$('#pDue').value,status:id?getProject().status:'待审核',currentStage:id?getProject().currentStage:'script1',created:id?getProject().created:Date.now(),stageData:id?getProject().stageData:{script1:{models:[''],opinions:[],confirmed:false}}};if(id)state.projects=state.projects.map(x=>x.id===id?p:x);else state.projects.unshift(p);save();$('#projectDialog').close();renderHome();openProject(p.id)});
+$('#newProject').onclick=()=>openDialog();$('#emptyNew').onclick=()=>openDialog();$('#closeProject').onclick=$('#cancelProject').onclick=()=>$('#projectDialog').close();$('#projectRows').onclick=e=>{const r=e.target.closest('.project-row');if(r)openProject(r.dataset.id)};$('#backProjects').onclick=()=>{syncForm();showView('projects');renderHome()};$('#editProject').onclick=()=>openDialog(getProject());
+$('#versionList').onclick=e=>{const b=e.target.closest('[data-stage]');if(b){syncForm();currentStage=b.dataset.stage;renderReview()}};$('#addModel').onclick=()=>{const d=ensureData(getProject(),currentStage);d.models.push('');save();renderModels(d)};$('#modelLinks').addEventListener('click',e=>{const i=e.target.dataset.removeModel;if(i!==undefined){const d=ensureData(getProject(),currentStage);d.models.splice(+i,1);save();renderModels(d)}});$('#runReview').onclick=runAudit;
+$('#stageStepper').onclick=e=>{const b=e.target.closest('[data-open-stage]');if(!b)return;syncForm();currentStage=b.dataset.openStage;const p=getProject();ensureData(p,currentStage);p.currentStage=currentStage;p.status='待审核';save();renderReview();renderHome()};
+$('#opinionList').addEventListener('click',e=>{const i=e.target.dataset.removeOpinion;if(i!==undefined){const d=ensureData(getProject(),currentStage);d.opinions.splice(+i,1);d.confirmed=false;save();renderResult(d)}});$('#addOpinion').onclick=()=>{const d=ensureData(getProject(),currentStage);d.opinions.push({level:'必须修改',text:'填写人工审核意见。'});d.confirmed=false;save();renderResult(d)};$('#humanConfirm').onchange=e=>{syncForm();const d=ensureData(getProject(),currentStage);d.confirmed=e.target.checked;getProject().status=d.confirmed?'待客户反馈':'待人工确认';save();renderResult(d);renderHome();toast(d.confirmed?'审核结果已人工确认':'已取消确认')};$('#copyFeishu').onclick=copyFeishu;$('#sendClient').onclick=()=>{getProject().status='待客户反馈';save();renderReview();renderHome();toast('已标记为待客户反馈')};
+$$('.input-tabs button').forEach(b=>b.onclick=()=>{$$('.input-tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');['text','file','feishu'].forEach(x=>$(`#${x}Input`).hidden=x!==b.dataset.input)});$('#scriptFile').onchange=e=>{const d=ensureData(getProject(),currentStage);d.fileName=e.target.files[0]?.name||'';save();$('#fileName').textContent=d.fileName?`已选择：${d.fileName}`:''};$('#videoFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const d=ensureData(getProject(),currentStage);d.fileName=f.name;save();const v=$('#videoPreview');v.src=URL.createObjectURL(f);v.hidden=false};
+$$('.filter').forEach(b=>b.onclick=()=>{$$('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');filter=b.dataset.status;renderHome()});$$('.quick-filter').forEach(b=>b.onclick=()=>{filter=b.dataset.status;showView('projects');renderHome()});$('#searchInput').oninput=e=>{query=e.target.value;renderHome()};$$('.nav').forEach(b=>b.onclick=()=>showView(b.dataset.view));$('#menuBtn').onclick=()=>$('.sidebar').classList.toggle('open');document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();showView('projects');$('#searchInput').focus()}});document.addEventListener('input',e=>{if(currentProject&&e.target.closest('#reviewView')&&!['humanConfirm'].includes(e.target.id)){const d=ensureData(getProject(),currentStage);if(d.confirmed){d.confirmed=false;getProject().status='待人工确认'}syncForm()}});
+const now=new Date();$('#todayLabel').textContent=new Intl.DateTimeFormat('zh-CN',{weekday:'long'}).format(now);$('#todayNum').textContent=now.getDate();renderHome();showView('projects');
