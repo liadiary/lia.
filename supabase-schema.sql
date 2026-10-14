@@ -56,8 +56,9 @@ using (public.is_flourish_admin() or owner_bd = public.current_bd_name())
 with check (public.is_flourish_admin() or owner_bd = public.current_bd_name());
 
 drop policy if exists "admin deletes review projects" on public.review_projects;
-create policy "admin deletes review projects" on public.review_projects for delete to authenticated
-using (public.is_flourish_admin());
+drop policy if exists "delete permitted review projects" on public.review_projects;
+create policy "delete permitted review projects" on public.review_projects for delete to authenticated
+using (public.is_flourish_admin() or owner_bd = public.current_bd_name());
 
 revoke all on public.profiles from anon;
 revoke all on public.review_projects from anon;
