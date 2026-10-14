@@ -6,12 +6,21 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="app">
+<section id="authView" class="auth-view">
+  <div class="auth-card">
+    <div class="auth-mark">F</div>
+    <span class="eyebrow">FLOURISHCULTURE</span>
+    <h1>欢迎回来</h1>
+    <p>登录后进入达人审核工作台</p>
+    <form id="loginForm"><label>邮箱<input id="loginEmail" type="email" required autocomplete="username" placeholder="name@company.com"></label><label>密码<input id="loginPassword" type="password" required autocomplete="current-password" placeholder="输入密码"></label><button class="primary" type="submit">登录</button><small id="loginError" role="alert"></small></form>
+  </div>
+</section>
+<div class="app" id="workspace" hidden>
   <aside class="sidebar">
     <a class="brand" href="#"><span>F</span><b>Flourish</b></a>
     <nav><small>当前项目</small><button class="nav active" data-view="projects">▦<span>Tripo</span><i id="projectCount">0</i></button></nav>
     <nav><small>快捷筛选</small><button class="quick-filter" data-status="待审核"><i class="dot white"></i>待审核</button><button class="quick-filter" data-status="待人工确认"><i class="dot gray"></i>待人工确认</button><button class="quick-filter" data-status="待客户反馈"><i class="dot ring"></i>待客户反馈</button></nav>
-    <div class="profile"><span>FC</span><div><b>FlourishCulture</b><small>单人工作区 · 已本地保存</small></div></div>
+    <div class="profile"><span id="profileInitial">FC</span><div><b id="profileName">FlourishCulture</b><small id="profileRole">安全工作区</small></div><button id="logoutBtn" title="退出登录">↪</button></div>
   </aside>
 
   <section class="main">
@@ -43,5 +52,5 @@
 </div>
 
 <dialog id="projectDialog"><form id="projectForm"><header><div><span class="eyebrow">CREATOR SETUP</span><h2 id="projectDialogTitle">添加达人审核</h2></div><button type="button" class="icon" id="closeProject">×</button></header><input id="projectId" type="hidden"><div class="form-grid"><label>达人名称 *<input id="pCreator" required placeholder="达人姓名，保存后即为文档名称"></label><label>达人国家 *<input id="pCountry" required placeholder="例如：美国"></label><label>达人类型 *<select id="pType" required><option value="">请选择</option><option>VFX / Animation</option><option>Design / 3D Artist</option><option>Game Development</option><option>3D Printing</option><option>Parent & Home DIY</option><option>Space / Product / Web / Programming</option></select></label><label>内容语言<input id="pLanguage" placeholder="例如：英语"></label><label class="wide-field">发送给达人的 Brief *<select id="pBrief" required><option value="">请选择 Brief</option><option>VFX / Animation Creators</option><option>Design / 3D Artist</option><option>Game Development</option><option>Smart Mesh P2.0 / Game-Ready Pipeline</option><option>3D Printing Creators</option><option>Parent & Home DIY</option><option>Space / Product Design / Web / Programming</option></select></label><label class="wide-field">负责 BD *<select id="pOwner" required><option value="">请选择 BD</option><option>Adriana</option><option>Kristin</option><option>Stella</option><option>Liora</option></select></label></div><footer><button type="button" class="secondary" id="cancelProject">取消</button><button class="primary" type="submit">保存并进入审核</button></footer></form></dialog>
-<div id="toast" class="toast"></div><script src="app.js"></script>
+<div id="toast" class="toast"></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script src="app.js"></script>
 </body></html>
