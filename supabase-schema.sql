@@ -7,6 +7,7 @@ create table if not exists public.profiles (
   display_name text not null,
   bd_name text check (bd_name in ('Adriana','Kristin','Stella','Liora') or bd_name is null),
   is_admin boolean not null default false,
+  can_view_all boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -29,6 +30,10 @@ create or replace function public.current_bd_name()
 returns text language sql stable security definer set search_path = public
 as $$ select bd_name from public.profiles where id = auth.uid() $$;
 
+create or replace function public.can_view_all_reviews()
+returns boolean language sql stable security definer set search_path = public
+as $$ select coalesce((select is_admin or can_view_all from public.profiles where id = auth.uid()), false) $$;
+
 drop policy if exists "read own profile" on public.profiles;
 create policy "read own profile" on public.profiles for select to authenticated
 using (id = auth.uid());
@@ -39,7 +44,7 @@ using (public.is_flourish_admin());
 
 drop policy if exists "visible review projects" on public.review_projects;
 create policy "visible review projects" on public.review_projects for select to authenticated
-using (public.is_flourish_admin() or owner_bd = public.current_bd_name());
+using (public.can_view_all_reviews() or owner_bd = public.current_bd_name());
 
 drop policy if exists "create permitted review projects" on public.review_projects;
 create policy "create permitted review projects" on public.review_projects for insert to authenticated
